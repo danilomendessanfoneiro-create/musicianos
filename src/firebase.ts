@@ -1,5 +1,3 @@
-// src/firebase.ts (template)
-// Fill the environment variables in .env.local (see .env.example)
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 
