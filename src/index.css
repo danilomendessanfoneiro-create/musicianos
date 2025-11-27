@@ -1,3 +1,11 @@
-/* Minimal styles */
-html,body,#root { height:100%; margin:0; font-family: Inter, system-ui, sans-serif; }
-a { text-decoration: none; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* pequenas customizações que você já tinha no index.html */
+:root {
+  --bg: #09090b;
+  --fg: #f4f4f5;
+}
+html, body, #root { height: 100%; }
+body { background-color: var(--bg); color: var(--fg); }
