@@ -1,23 +1,39 @@
-import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import PrivateRoute from './components/PrivateRoute'
+import { Routes, Route, Navigate } from "react-router-dom"
+import Login from "./pages/Login"
+import DashboardPage from "./pages/Dashboard"
+import AdminPage from "./pages/Admin"
+
+import PrivateRoute from "./components/PrivateRoute"
+import AdminRoute from "./components/AdminRoute"
 
 export default function App() {
   return (
-    <div>
-      <nav style={{padding:12}}>
-        <Link to="/">Dashboard</Link> | <Link to="/login">Login</Link>
-      </nav>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={
+    <Routes>
+      {/* Login */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Dashboard normal */}
+      <Route
+        path="/"
+        element={
           <PrivateRoute>
-            <Dashboard />
+            <DashboardPage />
           </PrivateRoute>
-        } />
-      </Routes>
-    </div>
+        }
+      />
+
+      {/* Admin */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        }
+      />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   )
 }
