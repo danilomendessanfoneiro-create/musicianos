@@ -1,12 +1,21 @@
+import React, { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 
-import React, { useState, useEffect } from 'react';
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import CRM from './components/CRM';
-import Gigs from './components/Gigs';
-import Finance from './components/Finance';
-import Projects from './components/Projects';
-import { ViewState, Gig, Lead, Transaction, Project, LeadStatus } from './types';
+import Sidebar from './components/Sidebar'
+import Dashboard from './components/Dashboard'
+import CRM from './components/CRM'
+import Gigs from './components/Gigs'
+import Finance from './components/Finance'
+import Projects from './components/Projects'
+
+import LoginPage from './pages/Login'
+import AdminPage from './pages/Admin'
+
+// Auth
+import { useUserData } from './services/authService'
+
+// Types
+import { ViewState, Gig, Lead, Transaction, Project, LeadStatus } from './types'
 
 // Mock Data
 const INITIAL_LEADS: Lead[] = [
@@ -31,63 +40,70 @@ const INITIAL_PROJECTS: Project[] = [
   { id: '2', title: 'Fotos Promo', dueDate: '2023-11-25', cost: 800, status: 'in-progress', description: 'Sessão de fotos com fotógrafo Y' },
 ];
 
-const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewState>('dashboard');
-  
-  // App State
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
-  const [gigs, setGigs] = useState<Gig[]>(INITIAL_GIGS);
-  const [finance, setFinance] = useState<Transaction[]>(INITIAL_FINANCE);
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+function PrivateRoute({ children }: { children: JSX.Element }) {
+  const data = useUserData()
+  if (!data) return <Navigate to="/login" replace />
+  return children
+}
 
-  // Actions
-  const addLead = (lead: Lead) => setLeads([...leads, lead]);
-  
-  const updateLead = (updatedLead: Lead) => {
-    setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l));
-  };
+function AdminRoute({ children }: { children: JSX.Element }) {
+  const data = useUserData()
+  if (!data) return <Navigate to="/login" replace />
+  if (data.role !== 'admin') return <Navigate to="/" replace />
+  return children
+}
 
-  const updateLeadStatus = (id: string, status: LeadStatus) => {
-    setLeads(leads.map(l => l.id === id ? { ...l, status } : l));
-    // If booked, automatically add to gigs? (Simplification: just manual for now)
-  };
+export default function App() {
+  const [currentView, setCurrentView] = useState<ViewState>('dashboard')
+
+  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS)
+  const [gigs, setGigs] = useState<Gig[]>(INITIAL_GIGS)
+  const [finance, setFinance] = useState<Transaction[]>(INITIAL_FINANCE)
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS)
+
+  const addLead = (lead: Lead) => setLeads([...leads, lead])
+
+  const updateLead = (updatedLead: Lead) =>
+    setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l))
+
+  const updateLeadStatus = (id: string, status: LeadStatus) =>
+    setLeads(leads.map(l => l.id === id ? { ...l, status } : l))
 
   const addGig = (gig: Gig) => {
-    setGigs([...gigs, gig]);
-    // Auto-add income transaction
+    setGigs([...gigs, gig])
     if (gig.fee > 0) {
       addTransaction({
-        id: Date.now().toString() + '_inc',
+        id: Date.now().toString(),
         date: gig.date,
         description: `Cachê: ${gig.venue}`,
         amount: gig.fee,
         type: 'income',
         category: 'Show'
-      });
+      })
     }
-  };
+  }
 
-  const addTransaction = (t: Transaction) => setFinance([...finance, t]);
+  const addTransaction = (t: Transaction) => setFinance([...finance, t])
 
-  const addProject = (p: Project) => setProjects([...projects, p]);
-  const updateProjectStatus = (id: string, status: Project['status']) => {
-    setProjects(projects.map(p => p.id === id ? { ...p, status } : p));
-  };
+  const addProject = (p: Project) => setProjects([...projects, p])
+  const updateProjectStatus = (id: string, status: Project['status']) =>
+    setProjects(projects.map(p => p.id === id ? { ...p, status } : p))
 
-  return (
+  // Layout do painel (só aparece após login)
+  const PanelLayout = (
     <div className="min-h-screen bg-black text-zinc-100 flex font-sans selection:bg-indigo-500/30">
       <Sidebar currentView={currentView} onChangeView={setCurrentView} />
-      
+
       <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen">
         {currentView === 'dashboard' && (
           <Dashboard gigs={gigs} leads={leads} finance={finance} />
         )}
         {currentView === 'crm' && (
-          <CRM 
-            leads={leads} 
-            onAddLead={addLead} 
+          <CRM
+            leads={leads}
+            onAddLead={addLead}
             onUpdateLead={updateLead}
-            onUpdateStatus={updateLeadStatus} 
+            onUpdateStatus={updateLeadStatus}
           />
         )}
         {currentView === 'gigs' && (
@@ -97,11 +113,31 @@ const App: React.FC = () => {
           <Finance transactions={finance} onAddTransaction={addTransaction} />
         )}
         {currentView === 'projects' && (
-          <Projects projects={projects} onAddProject={addProject} onUpdateStatus={updateProjectStatus} />
+          <Projects
+            projects={projects}
+            onAddProject={addProject}
+            onUpdateStatus={updateProjectStatus}
+          />
         )}
       </main>
     </div>
-  );
-};
+  )
 
-export default App;
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/admin" element={
+        <AdminRoute>
+          <AdminPage />
+        </AdminRoute>
+      } />
+
+      <Route path="/" element={
+        <PrivateRoute>
+          {PanelLayout}
+        </PrivateRoute>
+      } />
+    </Routes>
+  )
+}
