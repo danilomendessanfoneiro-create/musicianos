@@ -1,35 +1,50 @@
 import { useEffect, useState } from "react"
-import { isAdmin } from "../services/admin"
 import { db } from "../firebase"
 import { collection, getDocs } from "firebase/firestore"
+import { useUserData } from "../services/authService"
 
 export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([])
-  const [allowed, setAllowed] = useState(false)
+  const userData = useUserData()
+
+  // Só deixa a página carregar se for admin
+  const isAdmin = userData?.role === "admin"
 
   useEffect(() => {
-    async function load() {
-      const ok = await isAdmin()
-      setAllowed(ok)
+    async function loadUsers() {
+      if (!isAdmin) return
 
-      if (ok) {
-        const snap = await getDocs(collection(db, "users"))
-        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        setUsers(list)
-      }
+      // Busca os usuários do Firestore (coleção app_users)
+      const snap = await getDocs(collection(db, "app_users"))
+      const list = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      setUsers(list)
     }
-    load()
-  }, [])
 
-  if (!allowed) return <div>Acesso negado</div>
+    loadUsers()
+  }, [isAdmin])
+
+  if (!isAdmin) {
+    return (
+      <div style={{ padding: 20 }}>
+        <h2>Acesso negado</h2>
+        <p>Você não tem permissão para acessar esta página.</p>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Admin</h1>
-      <h3>Usuários:</h3>
+      <h1>Painel do Administrador</h1>
+
+      <h3>Usuários cadastrados:</h3>
       <ul>
         {users.map(u => (
-          <li key={u.id}>{u.username}</li>
+          <li key={u.id}>
+            <b>{u.username}</b> — role: {u.role}
+          </li>
         ))}
       </ul>
     </div>
